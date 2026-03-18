@@ -1,4 +1,4 @@
-// background.js - Version 1.0.6 (Multi-provider Support)
+// background.js - Version 1.0.8 (Finalized Platform Support)
 const AITranslationService = {
   apiKey: null,
   provider: 'openai',
@@ -34,11 +34,14 @@ const AITranslationService = {
       'Authorization': `Bearer ${AITranslationService.apiKey}`
     };
 
+    if (AITranslationService.provider === 'openrouter') {
+      url = "https://openrouter.ai/api/v1/chat/completions";
+      model = "openai/gpt-4o-mini"; 
+      headers['HTTP-Referer'] = 'chrome-extension://jayden-translator';
     } else if (AITranslationService.provider === 'deepseek') {
       url = "https://api.deepseek.com/chat/completions";
       model = "deepseek-chat";
     } else if (AITranslationService.provider === 'gemini') {
-      // Gemini has a unique URL structure including the key
       url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AITranslationService.apiKey}`;
       const prompt = `Translate to ${targetLang}. Concise subtitles. Original: ${text}`;
       try {
@@ -104,30 +107,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 function startTabAudioCapture() {
   chrome.tabCapture.capture({ audio: true, video: false }, (stream) => {
-    if (!stream) {
-      console.error("Tab capture failed:", chrome.runtime.lastError);
-      return;
-    }
-    
-    // Play the audio locally so the user can still hear it
+    if (!stream) return;
     const audio = new Audio();
     audio.srcObject = stream;
     audio.play();
-
     streamInstance = stream;
     isCapturing = true;
     chrome.storage.sync.set({ isCapturing: true });
     broadcastToAllTabs("START_HYBRID_ENGINE");
-
-    // Start recording chunks for Whisper
     startRecordingChunks(stream);
   });
 }
 
 function startRecordingChunks(stream) {
-  const options = { mimeType: 'audio/webm;codecs=opus' };
-  audioRecorder = new MediaRecorder(stream, options);
-  
+  audioRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
   audioRecorder.ondataavailable = async (event) => {
     if (event.data.size > 0 && isCapturing) {
       const transcription = await AITranslationService.transcribe(event.data);
@@ -138,8 +131,6 @@ function startRecordingChunks(stream) {
       }
     }
   };
-
-  // Record in 3-second intervals for real-time-ish feed
   audioRecorder.start(3000); 
 }
 
@@ -153,27 +144,19 @@ function stopTabAudioCapture() {
 
 async function handleTranslationFlow(text, tabId) {
   const translation = await AITranslationService.translate(text, targetLanguage);
-  chrome.tabs.sendMessage(tabId, {
-    action: "UPDATE_SUBTITLES",
-    original: text,
-    translated: translation
-  }).catch(() => {});
+  chrome.tabs.sendMessage(tabId, { action: "UPDATE_SUBTITLES", original: text, translated: translation }).catch(() => {});
 }
 
 function broadcastToAllTabs(action) {
   chrome.tabs.query({}, (tabs) => {
-    tabs.forEach(tab => {
-      chrome.tabs.sendMessage(tab.id, { action }).catch(() => {});
-    });
+    tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { action }).catch(() => {}));
   });
 }
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete') {
     chrome.storage.sync.get(['isCapturing'], (res) => {
-      if (res.isCapturing) {
-        chrome.tabs.sendMessage(tabId, { action: "START_HYBRID_ENGINE" }).catch(() => {});
-      }
+      if (res.isCapturing) chrome.tabs.sendMessage(tabId, { action: "START_HYBRID_ENGINE" }).catch(() => {});
     });
   }
 });
