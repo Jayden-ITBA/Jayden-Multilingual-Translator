@@ -1,11 +1,19 @@
 // background.js - Consolidated & Flattened
-// No imports to avoid SyntaxErrors in extension context
-
 const AITranslationService = {
   apiKey: null,
   setApiKey: (key) => { AITranslationService.apiKey = key; },
   translate: async (text, targetLang) => {
-    if (!AITranslationService.apiKey) return text;
+    // If no key in memory, try to get it from storage right now
+    if (!AITranslationService.apiKey) {
+      const storage = await chrome.storage.sync.get(['apiKey']);
+      if (storage.apiKey) AITranslationService.apiKey = storage.apiKey;
+    }
+
+    if (!AITranslationService.apiKey) {
+      console.warn("Translation skipped: API Key missing.");
+      return "Error: Please set API Key in Popup";
+    }
+
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -16,19 +24,25 @@ const AITranslationService = {
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: [
-            { role: "system", content: `Translate to ${targetLang}. Concise subtitles only.` },
+            { role: "system", content: `You are a real-time subtitle translator. Translate to ${targetLang}. Concise, natural subtitles ONLY. If original is English, translate to Vietnamese.` },
             { role: "user", content: text }
-          ]
+          ],
+          temperature: 0.3
         })
       });
       const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
       return data.choices[0].message.content.trim();
-    } catch (e) { return text; }
+    } catch (e) { 
+      console.error("Translation API Error:", e);
+      return `[Trans Error]: ${e.message}`; 
+    }
   }
 };
 
 let targetLanguage = 'vi';
 
+// Initial Load
 chrome.storage.sync.get(['apiKey', 'targetLanguage'], (result) => {
   if (result.apiKey) AITranslationService.setApiKey(result.apiKey);
   if (result.targetLanguage) targetLanguage = result.targetLanguage;

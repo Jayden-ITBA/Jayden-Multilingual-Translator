@@ -38,20 +38,8 @@
     }
   };
 
-  function initWebSpeech(onResult) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.onresult = (event) => {
-      let finalTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-      }
-      if (finalTranscript) onResult(finalTranscript);
-    };
-  }
+  // Web Speech (Mic) removed as per user request for Internal Audio only
+  function initWebSpeech() { return null; }
 
   function initOverlay() {
     if (document.getElementById('jayden-translator-overlay')) return;
@@ -64,28 +52,35 @@
       #subtitle-box {
         position: fixed; bottom: 12%; left: 50%; transform: translateX(-50%);
         background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(10px);
-        color: white; padding: 10px 20px; border-radius: 12px;
+        color: white; padding: 12px 24px; border-radius: 12px;
         font-family: system-ui, -apple-system, sans-serif; text-align: center;
-        z-index: 10000; min-width: 400px; max-width: 85%;
+        z-index: 10000; min-width: 400px; max-width: 90%;
         border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
         user-select: none;
+        resize: both; overflow: hidden; /* Enable resizing */
       }
       #drag-handle {
-        width: 100%; height: 12px; cursor: move;
-        background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 8px;
+        width: 100%; height: 14px; cursor: move;
+        background: rgba(255,255,255,0.08); border-radius: 7px; margin-bottom: 10px;
         display: flex; justify-content: center; align-items: center;
       }
-      #drag-handle::after { content: "•••"; color: #555; font-size: 10px; letter-spacing: 2px; }
-      .original { font-size: 14px; color: #b0b0b0; margin-bottom: 4px; font-style: italic; opacity: 0.8; }
-      .translated { font-size: 21px; font-weight: 700; color: #ffffff; line-height: 1.3; }
+      #drag-handle::after { content: "•••"; color: #777; font-size: 12px; letter-spacing: 3px; }
+      #resize-corner {
+        position: absolute; right: 0; bottom: 0; width: 15px; height: 15px;
+        cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%);
+        border-bottom-right-radius: 12px;
+      }
+      .original { font-size: 14px; color: #b0b0b0; margin-bottom: 6px; font-style: italic; opacity: 0.8; }
+      .translated { font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.4; }
     `;
     
     const box = document.createElement('div');
     box.id = 'subtitle-box';
     box.innerHTML = `
       <div id="drag-handle"></div>
-      <div id="jayden-original" class="original">Waiting for speech...</div>
-      <div id="jayden-translated" class="translated">Đang chờ âm thanh...</div>
+      <div id="jayden-original" class="original">Detecting audio/CC...</div>
+      <div id="jayden-translated" class="translated">Đang nhận diện giọng nói...</div>
+      <div id="resize-corner"></div>
     `;
     
     shadow.appendChild(style);
@@ -141,16 +136,12 @@
     if (isExtensionActive) return;
     isExtensionActive = true;
     initOverlay();
+    
+    // Polling for CC (Instant source if available)
     activeObserver = setInterval(() => {
       const text = CCExtractor.detectCC();
       if (text) chrome.runtime.sendMessage({ action: "PROCESS_TEXT", text });
-    }, 1000);
-    setTimeout(() => {
-      if (!CCExtractor.detectCC() && !isNativeRunning) {
-        initWebSpeech((text) => chrome.runtime.sendMessage({ action: "PROCESS_TEXT", text }));
-        if (recognition) { recognition.start(); isNativeRunning = true; }
-      }
-    }, 3000);
+    }, 800);
   }
 
   function stopEngine() {
