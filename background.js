@@ -34,13 +34,24 @@ const AITranslationService = {
       'Authorization': `Bearer ${AITranslationService.apiKey}`
     };
 
-    if (AITranslationService.provider === 'openrouter') {
-      url = "https://openrouter.ai/api/v1/chat/completions";
-      model = "openai/gpt-4o-mini"; // Default on OpenRouter
-      headers['HTTP-Referer'] = 'chrome-extension://jayden-translator';
     } else if (AITranslationService.provider === 'deepseek') {
       url = "https://api.deepseek.com/chat/completions";
       model = "deepseek-chat";
+    } else if (AITranslationService.provider === 'gemini') {
+      // Gemini has a unique URL structure including the key
+      url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AITranslationService.apiKey}`;
+      const prompt = `Translate to ${targetLang}. Concise subtitles. Original: ${text}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text.trim();
+      } catch (e) { return text; }
     }
 
     try {

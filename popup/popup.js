@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentLangText = document.getElementById('current-lang-text');
   const apiKeyInput = document.getElementById('api-key-input');
   const providerSelect = document.getElementById('provider-select');
+  const gearLink = document.getElementById('gear-link');
 
   // Load saved state
   chrome.storage.sync.get(['targetLanguage', 'apiKey', 'isCapturing', 'provider'], (result) => {
@@ -75,5 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   providerSelect.addEventListener('change', () => {
     chrome.runtime.sendMessage({ action: "SET_PROVIDER", provider: providerSelect.value });
+  });
+
+  gearLink.addEventListener('click', () => {
+    chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` });
   });
 });
