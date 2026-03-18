@@ -5,11 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusText = document.getElementById('status-text');
   const langSelect = document.getElementById('lang-select');
   const apiKeyInput = document.getElementById('api-key-input');
+  const providerSelect = document.getElementById('provider-select');
 
   // Load saved state
-  chrome.storage.sync.get(['targetLanguage', 'apiKey', 'isCapturing'], (result) => {
+  chrome.storage.sync.get(['targetLanguage', 'apiKey', 'isCapturing', 'provider'], (result) => {
     if (result.targetLanguage) langSelect.value = result.targetLanguage;
     if (result.apiKey) apiKeyInput.value = result.apiKey;
+    if (result.provider) providerSelect.value = result.provider;
     
     if (result.isCapturing) {
       updateUIActive(true);
@@ -46,5 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   apiKeyInput.addEventListener('change', () => {
     chrome.runtime.sendMessage({ action: "SET_API_KEY", apiKey: apiKeyInput.value.trim() });
+  });
+
+  providerSelect.addEventListener('change', () => {
+    chrome.runtime.sendMessage({ action: "SET_PROVIDER", provider: providerSelect.value });
   });
 });

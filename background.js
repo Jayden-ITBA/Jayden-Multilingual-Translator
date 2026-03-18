@@ -1,11 +1,13 @@
-// background.js - Version 1.0.5 (Internal Audio + Whisper STT)
+// background.js - Version 1.0.6 (Multi-provider Support)
 const AITranslationService = {
   apiKey: null,
+  provider: 'openai',
   setApiKey: (key) => { AITranslationService.apiKey = key; },
+  setProvider: (prov) => { AITranslationService.provider = prov; },
   
-  // Whisper Transcription
+  // Whisper Transcription (OpenAI only for now)
   transcribe: async (audioBlob) => {
-    if (!AITranslationService.apiKey) return null;
+    if (!AITranslationService.apiKey || AITranslationService.provider !== 'openai') return null;
     const formData = new FormData();
     formData.append("file", audioBlob, "audio.webm");
     formData.append("model", "whisper-1");
@@ -18,26 +20,37 @@ const AITranslationService = {
       });
       const data = await response.json();
       return data.text;
-    } catch (e) {
-      console.error("Whisper Error:", e);
-      return null;
-    }
+    } catch (e) { return null; }
   },
 
-  // GPT Translation
+  // GPT / Multi-LLM Translation
   translate: async (text, targetLang) => {
     if (!AITranslationService.apiKey || !text) return text;
+    
+    let url = "https://api.openai.com/v1/chat/completions";
+    let model = "gpt-4o-mini";
+    let headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${AITranslationService.apiKey}`
+    };
+
+    if (AITranslationService.provider === 'openrouter') {
+      url = "https://openrouter.ai/api/v1/chat/completions";
+      model = "openai/gpt-4o-mini"; // Default on OpenRouter
+      headers['HTTP-Referer'] = 'chrome-extension://jayden-translator';
+    } else if (AITranslationService.provider === 'deepseek') {
+      url = "https://api.deepseek.com/chat/completions";
+      model = "deepseek-chat";
+    }
+
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${AITranslationService.apiKey}`
-        },
+        headers: headers,
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: model,
           messages: [
-            { role: "system", content: `You are a real-time subtitle translator. Translate to ${targetLang}. Concise, natural subtitles.` },
+            { role: "system", content: `Translate to ${targetLang}. Concise subtitles.` },
             { role: "user", content: text }
           ]
         })
@@ -53,9 +66,10 @@ let targetLanguage = 'vi';
 let audioRecorder = null;
 let streamInstance = null;
 
-chrome.storage.sync.get(['apiKey', 'targetLanguage', 'isCapturing'], (result) => {
+chrome.storage.sync.get(['apiKey', 'targetLanguage', 'provider'], (result) => {
   if (result.apiKey) AITranslationService.setApiKey(result.apiKey);
   if (result.targetLanguage) targetLanguage = result.targetLanguage;
+  if (result.provider) AITranslationService.setProvider(result.provider);
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -66,6 +80,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === "SET_API_KEY") {
     AITranslationService.setApiKey(request.apiKey);
     chrome.storage.sync.set({ apiKey: request.apiKey });
+  } else if (request.action === "SET_PROVIDER") {
+    AITranslationService.setProvider(request.provider);
+    chrome.storage.sync.set({ provider: request.provider });
   } else if (request.action === "SET_LANGUAGE") {
     targetLanguage = request.language;
     chrome.storage.sync.set({ targetLanguage: request.language });

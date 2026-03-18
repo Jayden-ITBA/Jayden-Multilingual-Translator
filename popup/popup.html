@@ -53,8 +53,16 @@
   </div>
 
   <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">
-    <label for="api-key-input">OpenAI API Key:</label>
-    <input type="password" id="api-key-input" placeholder="sk-..." style="width: 100%; padding: 8px; box-sizing: border-box; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc;">
+    <label for="provider-select">AI Provider:</label>
+    <select id="provider-select" style="margin-bottom:8px;">
+      <option value="openai">OpenAI (Default)</option>
+      <option value="openrouter">OpenRouter</option>
+      <option value="deepseek">DeepSeek</option>
+      <option value="gemini">Google Gemini</option>
+    </select>
+    
+    <label for="api-key-input">API Key:</label>
+    <input type="password" id="api-key-input" placeholder="Paste your key here" style="width: 100%; padding: 8px; box-sizing: border-box; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc;">
     <small style="font-size: 10px; color: #888;">Keys are stored locally in your browser.</small>
   </div>
 
