@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Jayden Multilingual Translator",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Real-time dual-language subtitles for web audio and video.",
   "permissions": [
     "tabCapture",
