@@ -1,40 +1,62 @@
-// Popup Script for Jayden Multilingual Translator
+// popup.js - Updated for Premium UI
 document.addEventListener('DOMContentLoaded', () => {
-  const startBtn = document.getElementById('start-btn');
+  const mainToggle = document.getElementById('main-toggle');
   const stopBtn = document.getElementById('stop-btn');
-  const statusText = document.getElementById('status-text');
+  const headerStatus = document.getElementById('header-status');
+  const activeSection = document.getElementById('active-translation-section');
   const langSelect = document.getElementById('lang-select');
+  const currentLangText = document.getElementById('current-lang-text');
   const apiKeyInput = document.getElementById('api-key-input');
   const providerSelect = document.getElementById('provider-select');
 
   // Load saved state
   chrome.storage.sync.get(['targetLanguage', 'apiKey', 'isCapturing', 'provider'], (result) => {
-    if (result.targetLanguage) langSelect.value = result.targetLanguage;
+    if (result.targetLanguage) {
+      langSelect.value = result.targetLanguage;
+      updateLangText(result.targetLanguage);
+    }
     if (result.apiKey) apiKeyInput.value = result.apiKey;
     if (result.provider) providerSelect.value = result.provider;
     
     if (result.isCapturing) {
       updateUIActive(true);
+      mainToggle.checked = true;
     }
   });
 
   function updateUIActive(isActive) {
     if (isActive) {
-      statusText.innerText = "Active";
-      statusText.style.color = "#28a745";
-      startBtn.style.display = 'none';
-      stopBtn.style.display = 'block';
+      headerStatus.innerText = "Active";
+      headerStatus.classList.add('status-active');
+      activeSection.style.display = 'block';
     } else {
-      statusText.innerText = "Ready";
-      statusText.style.color = "#666";
-      startBtn.style.display = 'block';
-      stopBtn.style.display = 'none';
+      headerStatus.innerText = "Inactive";
+      headerStatus.classList.remove('status-active');
+      activeSection.style.display = 'none';
+      mainToggle.checked = false;
     }
   }
 
-  startBtn.addEventListener('click', () => {
-    updateUIActive(true);
-    chrome.runtime.sendMessage({ action: "START_CAPTURE" });
+  function updateLangText(code) {
+    const names = {
+      'vi': 'VIETNAMESE',
+      'en': 'ENGLISH',
+      'ja': 'JAPANESE',
+      'ko': 'KOREAN',
+      'zh': 'CHINESE',
+      'fr': 'FRENCH'
+    };
+    currentLangText.innerText = names[code] || 'VIETNAMESE';
+  }
+
+  mainToggle.addEventListener('change', () => {
+    if (mainToggle.checked) {
+      updateUIActive(true);
+      chrome.runtime.sendMessage({ action: "START_CAPTURE" });
+    } else {
+      updateUIActive(false);
+      chrome.runtime.sendMessage({ action: "STOP_CAPTURE" });
+    }
   });
 
   stopBtn.addEventListener('click', () => {
@@ -43,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   langSelect.addEventListener('change', () => {
+    updateLangText(langSelect.value);
     chrome.runtime.sendMessage({ action: "SET_LANGUAGE", language: langSelect.value });
   });
 
