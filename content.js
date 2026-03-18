@@ -13,8 +13,27 @@
 
   const CCExtractor = {
     detectCC: () => {
-      const ytCC = document.querySelector('.ytp-caption-segment');
-      if (ytCC) return ytCC.innerText;
+      // 1. YouTube specific (multiple possible classes)
+      const ytSelectors = [
+        '.ytp-caption-segment',
+        '.captions-text .caption-visual-line',
+        '.ytp-subtitles-player-content'
+      ];
+      for (const sel of ytSelectors) {
+        const el = document.querySelector(sel);
+        if (el && el.innerText.trim()) return el.innerText.trim();
+      }
+
+      // 2. Generic Video TextTracks
+      const video = document.querySelector('video');
+      if (video && video.textTracks) {
+        for (let i = 0; i < video.textTracks.length; i++) {
+          const track = video.textTracks[i];
+          if (track.mode === 'showing' && track.activeCues && track.activeCues.length > 0) {
+            return track.activeCues[0].text;
+          }
+        }
+      }
       return null;
     }
   };
@@ -40,24 +59,31 @@
     container.id = 'jayden-translator-overlay';
     const shadow = container.attachShadow({ mode: 'open' });
     
-    // Inject Styles directly to avoid link issues
     const style = document.createElement('style');
     style.textContent = `
       #subtitle-box {
         position: fixed; bottom: 12%; left: 50%; transform: translateX(-50%);
-        background: rgba(18, 18, 18, 0.9); backdrop-filter: blur(8px);
-        color: white; padding: 16px 28px; border-radius: 16px;
+        background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(10px);
+        color: white; padding: 10px 20px; border-radius: 12px;
         font-family: system-ui, -apple-system, sans-serif; text-align: center;
-        z-index: 10000; cursor: move; min-width: 380px; max-width: 80%;
-        border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        z-index: 10000; min-width: 400px; max-width: 85%;
+        border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        user-select: none;
       }
-      .original { font-size: 15px; color: #b0b0b0; margin-bottom: 8px; font-style: italic; opacity: 0.9; }
-      .translated { font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.3; }
+      #drag-handle {
+        width: 100%; height: 12px; cursor: move;
+        background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 8px;
+        display: flex; justify-content: center; align-items: center;
+      }
+      #drag-handle::after { content: "•••"; color: #555; font-size: 10px; letter-spacing: 2px; }
+      .original { font-size: 14px; color: #b0b0b0; margin-bottom: 4px; font-style: italic; opacity: 0.8; }
+      .translated { font-size: 21px; font-weight: 700; color: #ffffff; line-height: 1.3; }
     `;
     
     const box = document.createElement('div');
     box.id = 'subtitle-box';
     box.innerHTML = `
+      <div id="drag-handle"></div>
       <div id="jayden-original" class="original">Waiting for speech...</div>
       <div id="jayden-translated" class="translated">Đang chờ âm thanh...</div>
     `;
@@ -65,7 +91,7 @@
     shadow.appendChild(style);
     shadow.appendChild(box);
     document.body.appendChild(container);
-    makeDraggable(box);
+    makeDraggable(box, shadow.getElementById('drag-handle'));
   }
 
   function updateUI(original, translated) {
@@ -77,22 +103,38 @@
     if (transEl) transEl.innerText = translated;
   }
 
-  function makeDraggable(el) {
+  function makeDraggable(el, handle) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    el.onmousedown = (e) => {
-      if (e.target.tagName === 'SELECT') return;
+    handle.onmousedown = dragMouseDown;
+
+    function dragMouseDown(e) {
       e.preventDefault();
-      pos3 = e.clientX; pos4 = e.clientY;
-      document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-      document.onmousemove = (e) => {
-        e.preventDefault();
-        pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
-        pos3 = e.clientX; pos4 = e.clientY;
-        el.style.top = (el.offsetTop - pos2) + "px";
-        el.style.left = (el.offsetLeft - pos1) + "px";
-        el.style.transform = 'none';
-      };
-    };
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      
+      const newTop = el.offsetTop - pos2;
+      const newLeft = el.offsetLeft - pos1;
+      
+      el.style.top = newTop + "px";
+      el.style.left = newLeft + "px";
+      el.style.transform = "none";
+      el.style.bottom = "auto";
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
   }
 
   function startEngine() {
