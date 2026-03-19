@@ -101,45 +101,90 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     targetLanguage = request.language;
     chrome.storage.sync.set({ targetLanguage: request.language });
   } else if (request.action === "PROCESS_TEXT") {
-    handleTranslationFlow(request.text, sender.tab.id);
+    handleTranslationFlow(request.text, sender.tab?.id);
+  } else if (request.action === "PROCESS_AUDIO_BLOB") {
+    handleAudioBlob(request.dataUrl);
   }
 });
 
-function startTabAudioCapture() {
-  chrome.tabCapture.capture({ audio: true, video: false }, (stream) => {
-    if (!stream) return;
-    const audio = new Audio();
-    audio.srcObject = stream;
-    audio.play();
-    streamInstance = stream;
-    isCapturing = true;
-    chrome.storage.sync.set({ isCapturing: true });
-    broadcastToAllTabs("START_HYBRID_ENGINE");
-    startRecordingChunks(stream);
+async function setupOffscreenDocument(path) {
+  const offscreenUrl = chrome.runtime.getURL(path);
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+    documentUrls: [offscreenUrl]
+  });
+
+  if (existingContexts.length > 0) {
+    return;
+  }
+
+  await chrome.offscreen.createDocument({
+    url: path,
+    reasons: ['USER_MEDIA'],
+    justification: 'Recording tab audio for translation'
   });
 }
 
-function startRecordingChunks(stream) {
-  audioRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-  audioRecorder.ondataavailable = async (event) => {
-    if (event.data.size > 0 && isCapturing) {
-      const transcription = await AITranslationService.transcribe(event.data);
-      if (transcription) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs[0]) handleTranslationFlow(transcription, tabs[0].id);
+async function startTabAudioCapture() {
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+    if (!tabs || tabs.length === 0) return;
+    const tabId = tabs[0].id;
+    
+    // Broadcast hybrid engine right away so CC extractor starts immediately
+    isCapturing = true;
+    chrome.storage.sync.set({ isCapturing: true });
+    broadcastToAllTabs("START_HYBRID_ENGINE");
+
+    try {
+      const streamId = await new Promise((resolve, reject) => {
+        chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (id) => {
+          if (chrome.runtime.lastError) {
+             reject(chrome.runtime.lastError);
+          } else {
+             resolve(id);
+          }
         });
-      }
+      });
+
+      await setupOffscreenDocument('offscreen.html');
+      
+      chrome.runtime.sendMessage({
+        target: 'offscreen',
+        type: 'start-recording',
+        streamId: streamId
+      });
+    } catch (err) {
+      console.error("Failed to start audio capture:", err);
+      // Even if audio capture fails, extension remains 'Active' for CC polling!
     }
-  };
-  audioRecorder.start(3000); 
+  });
 }
 
-function stopTabAudioCapture() {
+async function handleAudioBlob(dataUrl) {
+  if (!isCapturing) return;
+  try {
+    const response = await fetch(dataUrl);
+    const audioBlob = await response.blob();
+    const transcription = await AITranslationService.transcribe(audioBlob);
+    if (transcription) {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) handleTranslationFlow(transcription, tabs[0].id);
+      });
+    }
+  } catch (e) {
+    console.error("Transcription error:", e);
+  }
+}
+
+async function stopTabAudioCapture() {
   isCapturing = false;
-  if (audioRecorder && audioRecorder.state !== "inactive") audioRecorder.stop();
-  if (streamInstance) streamInstance.getTracks().forEach(t => t.stop());
   chrome.storage.sync.set({ isCapturing: false });
   broadcastToAllTabs("STOP_HYBRID_ENGINE");
+  
+  chrome.runtime.sendMessage({
+    target: 'offscreen',
+    type: 'stop-recording'
+  });
 }
 
 async function handleTranslationFlow(text, tabId) {

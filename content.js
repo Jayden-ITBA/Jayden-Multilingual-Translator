@@ -137,10 +137,14 @@
     isExtensionActive = true;
     initOverlay();
     
+    let lastProcessedText = "";
     // Polling for CC (Instant source if available)
     activeObserver = setInterval(() => {
       const text = CCExtractor.detectCC();
-      if (text) chrome.runtime.sendMessage({ action: "PROCESS_TEXT", text });
+      if (text && text !== lastProcessedText) {
+        lastProcessedText = text;
+        chrome.runtime.sendMessage({ action: "PROCESS_TEXT", text });
+      }
     }, 800);
   }
 
