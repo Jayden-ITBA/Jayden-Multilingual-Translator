@@ -42,59 +42,66 @@
   function initWebSpeech() { return null; }
 
   function initOverlay() {
-    if (document.getElementById('jayden-translator-overlay')) return;
-    
-    // Safety check for document body
-    if (!document.body) {
-      setTimeout(initOverlay, 500);
-      return;
-    }
+    try {
+      if (document.getElementById('jayden-translator-overlay')) return;
+      
+      // Use documentElement as it is more stable than body for SPA navigations
+      const parent = document.documentElement || document.body;
+      if (!parent) {
+        setTimeout(initOverlay, 500);
+        return;
+      }
 
-    const container = document.createElement('div');
-    container.id = 'jayden-translator-overlay';
-    const shadow = container.attachShadow({ mode: 'open' });
-    
-    const style = document.createElement('style');
-    style.textContent = `
-      #subtitle-box {
-        position: fixed; bottom: 12%; left: 50%; transform: translateX(-50%);
-        background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(12px);
-        color: white; padding: 14px 28px; border-radius: 16px;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif; text-align: center;
-        z-index: 2147483647; min-width: 420px; max-width: 90%;
-        border: 1px solid rgba(255, 255, 255, 0.2); 
-        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
-        user-select: none; transition: opacity 0.3s ease;
-        resize: both; overflow: hidden;
-      }
-      #drag-handle {
-        width: 100%; height: 16px; cursor: move;
-        background: rgba(255,255,255,0.06); border-radius: 8px; margin-bottom: 12px;
-        display: flex; justify-content: center; align-items: center;
-      }
-      #drag-handle::after { content: "•••"; color: rgba(255,255,255,0.3); font-size: 14px; letter-spacing: 4px; }
-      #resize-corner {
-        position: absolute; right: 0; bottom: 0; width: 18px; height: 18px;
-        cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.3) 50%);
-        border-bottom-right-radius: 16px;
-      }
-      .original { font-size: 15px; color: #b0b0b0; margin-bottom: 8px; font-style: italic; opacity: 0.9; line-height: 1.2; }
-      .translated { font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-    `;
-    
-    const box = document.createElement('div');
-    box.id = 'subtitle-box';
-    box.innerHTML = `
-      <div id="drag-handle"></div>
-      <div id="jayden-original" class="original">Đang chờ âm thanh...</div>
-      <div id="jayden-translated" class="translated">Jayden Translator Active</div>
-      <div id="resize-corner"></div>
-    `;
-    
-    shadow.appendChild(style);
-    shadow.appendChild(box);
-    document.body.appendChild(container);
-    makeDraggable(box, shadow.getElementById('drag-handle'));
+      const container = document.createElement('div');
+      container.id = 'jayden-translator-overlay';
+      const shadow = container.attachShadow({ mode: 'open' });
+      
+      const style = document.createElement('style');
+      style.textContent = `
+        #subtitle-box {
+          position: fixed; bottom: 15%; left: 50%; transform: translateX(-50%);
+          background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(14px);
+          color: white; padding: 16px 32px; border-radius: 20px;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif; text-align: center;
+          z-index: 2147483647; min-width: 450px; max-width: 85%;
+          border: 1px solid rgba(255, 255, 255, 0.25); 
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+          user-select: none; transition: all 0.3s ease;
+          resize: both; overflow: hidden;
+        }
+        #drag-handle {
+          width: 100%; height: 20px; cursor: move;
+          background: rgba(255,255,255,0.08); border-radius: 10px; margin-bottom: 12px;
+          display: flex; justify-content: center; align-items: center;
+        }
+        #drag-handle::after { content: "•••"; color: rgba(255,255,255,0.4); font-size: 16px; letter-spacing: 5px; }
+        #resize-corner {
+          position: absolute; right: 0; bottom: 0; width: 22px; height: 22px;
+          cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.3) 50%);
+          border-bottom-right-radius: 20px;
+        }
+        .original { font-size: 16px; color: #aaaaaa; margin-bottom: 8px; font-style: italic; opacity: 0.9; line-height: 1.3; }
+        .translated { font-size: 26px; font-weight: 800; color: #ffffff; line-height: 1.4; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+      `;
+      
+      const box = document.createElement('div');
+      box.id = 'subtitle-box';
+      box.innerHTML = `
+        <div id="drag-handle"></div>
+        <div id="jayden-original" class="original">Đang chờ tín hiệu...</div>
+        <div id="jayden-translated" class="translated">Jayden Translator Ready</div>
+        <div id="resize-corner"></div>
+      `;
+      
+      shadow.appendChild(style);
+      shadow.appendChild(box);
+      parent.appendChild(container);
+      makeDraggable(box, shadow.getElementById('drag-handle'));
+      console.log("Jayden Translator Overlay Injected Successfully");
+    } catch (e) {
+      console.error("Jayden Translator Overlay Error:", e);
+      setTimeout(initOverlay, 1000);
+    }
   }
 
   function updateUI(original, translated) {

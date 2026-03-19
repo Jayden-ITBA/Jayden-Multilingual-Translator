@@ -42,8 +42,14 @@ const AITranslationService = {
       url = "https://api.deepseek.com/chat/completions";
       model = "deepseek-chat";
     } else if (AITranslationService.provider === 'gemini') {
+      const langMap = {
+        'vi': 'Vietnamese', 'en': 'English', 'ja': 'Japanese',
+        'ko': 'Korean', 'zh': 'Chinese', 'fr': 'French'
+      };
+      const langName = langMap[targetLanguage] || 'Vietnamese';
       url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AITranslationService.apiKey}`;
-      const prompt = `Translate to ${targetLang}. Concise subtitles. Original: ${text}`;
+      const prompt = `Translate the following to ${langName}. Short subtitles only. Original: ${text}`;
+      
       try {
         const response = await fetch(url, {
           method: 'POST',
@@ -52,8 +58,13 @@ const AITranslationService = {
             contents: [{ parts: [{ text: prompt }] }]
           })
         });
+        
+        if (!response.ok) return text;
         const data = await response.json();
-        return data.candidates[0].content.parts[0].text.trim();
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+          return data.candidates[0].content.parts[0].text.trim();
+        }
+        return text;
       } catch (e) { return text; }
     }
 
