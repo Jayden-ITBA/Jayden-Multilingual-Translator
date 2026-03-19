@@ -45,30 +45,13 @@
     try {
       if (document.getElementById('jayden-translator-overlay')) return;
       
-      // Target the video container directly if possible
-      const video = document.querySelector('video');
-      const possibleParents = [
-        video ? video.parentElement : null,
-        document.getElementById('movie_player'),
-        document.querySelector('.html5-video-player'),
-        document.body,
-        document.documentElement
-      ];
-      
-      let parent = null;
-      for (const p of possibleParents) {
-        if (p && p.tagName !== 'HTML') { parent = p; break; }
-      }
-      
-      // Fallback to body/html if no container found
-      if (!parent) parent = document.body || document.documentElement;
-
+      const parent = document.body || document.documentElement;
       if (!parent) {
-        setTimeout(initOverlay, 1500);
+        setTimeout(initOverlay, 1000);
         return;
       }
 
-      console.log("Jayden Translator: Injecting into", parent.tagName, parent.id || parent.className);
+      console.log("Jayden Translator: Initializing on", parent.tagName);
 
       const container = document.createElement('div');
       container.id = 'jayden-translator-overlay';
@@ -82,10 +65,10 @@
           color: white; padding: 20px 40px; border-radius: 12px;
           font-family: 'Inter', system-ui, -apple-system, sans-serif; text-align: center;
           z-index: 2147483647; min-width: 500px; max-width: 90%;
-          box-shadow: 0 0 30px rgba(61, 90, 254, 0.5), 0 20px 60px rgba(0, 0, 0, 1);
-          user-select: none; transition: all 0.2s ease;
+          box-shadow: 0 0 30px rgba(61, 90, 254, 0.4), 0 20px 60px rgba(0, 0, 0, 1);
+          user-select: none; transition: opacity 0.3s ease;
           resize: both; overflow: hidden;
-          pointer-events: auto; display: block !important; visibility: visible !important;
+          pointer-events: auto; display: block !important;
         }
         #drag-handle {
           width: 100%; height: 20px; cursor: move;
@@ -113,8 +96,23 @@
       
       shadow.appendChild(style);
       shadow.appendChild(box);
-      parent.appendChild(container); // Append to the player or document
+      parent.appendChild(container); 
       makeDraggable(box, shadow.getElementById('drag-handle'));
+
+      // Fullscreen support: Move overlay into the fullscreen element (like YouTube player) 
+      // otherwise it becomes invisible in fullscreen mode.
+      document.addEventListener('fullscreenchange', () => {
+        const fsElement = document.fullscreenElement;
+        const currentOverlay = document.getElementById('jayden-translator-overlay');
+        if (currentOverlay) {
+          if (fsElement) {
+            fsElement.appendChild(currentOverlay);
+          } else {
+            document.body.appendChild(currentOverlay);
+          }
+        }
+      });
+
       console.log("Jayden Translator Overlay Injected Successfully");
     } catch (e) {
       console.error("Jayden Translator Overlay Error:", e);
