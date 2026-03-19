@@ -45,22 +45,26 @@
     try {
       if (document.getElementById('jayden-translator-overlay')) return;
       
-      // Target YouTube player or generic video containers for better visibility in full-screen
+      // Target the video container directly if possible
+      const video = document.querySelector('video');
       const possibleParents = [
+        video ? video.parentElement : null,
         document.getElementById('movie_player'),
         document.querySelector('.html5-video-player'),
-        document.querySelector('.video-container'),
-        document.documentElement,
-        document.body
+        document.body,
+        document.documentElement
       ];
       
       let parent = null;
       for (const p of possibleParents) {
-        if (p) { parent = p; break; }
+        if (p && p.tagName !== 'HTML') { parent = p; break; }
       }
+      
+      // Fallback to body/html if no container found
+      if (!parent) parent = document.body || document.documentElement;
 
       if (!parent) {
-        setTimeout(initOverlay, 1000);
+        setTimeout(initOverlay, 1500);
         return;
       }
 
@@ -74,15 +78,14 @@
       style.textContent = `
         #subtitle-box {
           position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(14px);
-          color: white; padding: 18px 36px; border-radius: 20px;
+          background: #000000; border: 2px solid #3d5afe; 
+          color: white; padding: 20px 40px; border-radius: 12px;
           font-family: 'Inter', system-ui, -apple-system, sans-serif; text-align: center;
-          z-index: 2147483647; min-width: 480px; max-width: 85%;
-          border: 1px solid rgba(255, 255, 255, 0.25); 
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
-          user-select: none; transition: all 0.3s ease;
+          z-index: 2147483647; min-width: 500px; max-width: 90%;
+          box-shadow: 0 0 30px rgba(61, 90, 254, 0.5), 0 20px 60px rgba(0, 0, 0, 1);
+          user-select: none; transition: all 0.2s ease;
           resize: both; overflow: hidden;
-          pointer-events: auto; /* Ensure it stays interactive even in shadow dom */
+          pointer-events: auto; display: block !important; visibility: visible !important;
         }
         #drag-handle {
           width: 100%; height: 20px; cursor: move;

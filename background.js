@@ -48,7 +48,7 @@ const AITranslationService = {
       };
       const langName = langMap[targetLanguage] || 'Vietnamese';
       url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AITranslationService.apiKey}`;
-      const prompt = `Translate the following to ${langName}. Short subtitles only. Original: ${text}`;
+      const prompt = `Translate the lyrics/subtitles to ${langName}. If it's just symbols like ♪, return just those symbols. If it's text, translate it accurately. Output ONLY the translation. Text: ${text}`;
       
       try {
         const response = await fetch(url, {
@@ -228,4 +228,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (res.isCapturing) chrome.tabs.sendMessage(tabId, { action: "START_HYBRID_ENGINE" }).catch(() => {});
     });
   }
+});
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  chrome.storage.sync.get(['isCapturing'], (res) => {
+    if (res.isCapturing) chrome.tabs.sendMessage(activeInfo.tabId, { action: "START_HYBRID_ENGINE" }).catch(() => {});
+  });
 });
