@@ -45,12 +45,26 @@
     try {
       if (document.getElementById('jayden-translator-overlay')) return;
       
-      // Use documentElement as it is more stable than body for SPA navigations
-      const parent = document.documentElement || document.body;
+      // Target YouTube player or generic video containers for better visibility in full-screen
+      const possibleParents = [
+        document.getElementById('movie_player'),
+        document.querySelector('.html5-video-player'),
+        document.querySelector('.video-container'),
+        document.documentElement,
+        document.body
+      ];
+      
+      let parent = null;
+      for (const p of possibleParents) {
+        if (p) { parent = p; break; }
+      }
+
       if (!parent) {
-        setTimeout(initOverlay, 500);
+        setTimeout(initOverlay, 1000);
         return;
       }
+
+      console.log("Jayden Translator: Injecting into", parent.tagName, parent.id || parent.className);
 
       const container = document.createElement('div');
       container.id = 'jayden-translator-overlay';
@@ -61,13 +75,14 @@
         #subtitle-box {
           position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
           background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(14px);
-          color: white; padding: 16px 32px; border-radius: 20px;
+          color: white; padding: 18px 36px; border-radius: 20px;
           font-family: 'Inter', system-ui, -apple-system, sans-serif; text-align: center;
-          z-index: 2147483647; min-width: 450px; max-width: 85%;
+          z-index: 2147483647; min-width: 480px; max-width: 85%;
           border: 1px solid rgba(255, 255, 255, 0.25); 
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
           user-select: none; transition: all 0.3s ease;
           resize: both; overflow: hidden;
+          pointer-events: auto; /* Ensure it stays interactive even in shadow dom */
         }
         #drag-handle {
           width: 100%; height: 20px; cursor: move;
@@ -95,12 +110,12 @@
       
       shadow.appendChild(style);
       shadow.appendChild(box);
-      parent.appendChild(container);
+      parent.appendChild(container); // Append to the player or document
       makeDraggable(box, shadow.getElementById('drag-handle'));
       console.log("Jayden Translator Overlay Injected Successfully");
     } catch (e) {
       console.error("Jayden Translator Overlay Error:", e);
-      setTimeout(initOverlay, 1000);
+      setTimeout(initOverlay, 2000);
     }
   }
 
