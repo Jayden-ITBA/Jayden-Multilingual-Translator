@@ -121,6 +121,8 @@
   }
 
   function updateUI(original, translated) {
+    if (!isExtensionActive) return; // Prevent re-creating UI if stopped
+    
     // Self-healing: Ensure overlay exists if a subtitle arrives
     if (!document.getElementById('jayden-translator-overlay')) {
       initOverlay();

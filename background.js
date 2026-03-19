@@ -212,7 +212,9 @@ async function stopTabAudioCapture() {
 }
 
 async function handleTranslationFlow(text, tabId) {
+  if (!isCapturing) return; // Don't process if stopped
   const translation = await AITranslationService.translate(text, targetLanguage);
+  if (!isCapturing) return; // Second check after async delay
   chrome.tabs.sendMessage(tabId, { action: "UPDATE_SUBTITLES", original: text, translated: translation }).catch(() => {});
 }
 
