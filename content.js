@@ -59,7 +59,7 @@
       const style = document.createElement('style');
       style.textContent = `
         #subtitle-box {
-          position: fixed; bottom: 15%; left: 50%; transform: translateX(-50%);
+          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
           background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(14px);
           color: white; padding: 16px 32px; border-radius: 20px;
           font-family: 'Inter', system-ui, -apple-system, sans-serif; text-align: center;
@@ -164,10 +164,22 @@
   }
 
   function startEngine() {
-    if (isExtensionActive) return;
     isExtensionActive = true;
     initOverlay();
     
+    // Reset position to center if it already existed
+    const overlay = document.getElementById('jayden-translator-overlay');
+    if (overlay && overlay.shadowRoot) {
+      const box = overlay.shadowRoot.getElementById('subtitle-box');
+      if (box) {
+        box.style.top = "50%";
+        box.style.left = "50%";
+        box.style.bottom = "auto";
+        box.style.transform = "translate(-50%, -50%)";
+      }
+    }
+    
+    if (activeObserver) clearInterval(activeObserver);
     let lastProcessedText = "";
     // Polling for CC (Instant source if available)
     activeObserver = setInterval(() => {
