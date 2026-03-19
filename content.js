@@ -11,34 +11,9 @@
   let isExtensionActive = false;
   let recognition = null;
 
-  const CCExtractor = {
-    detectCC: () => {
-      // 1. YouTube specific (multiple possible classes)
-      const ytSelectors = [
-        '.ytp-caption-segment',
-        '.captions-text .caption-visual-line',
-        '.ytp-subtitles-player-content'
-      ];
-      for (const sel of ytSelectors) {
-        const el = document.querySelector(sel);
-        if (el && el.innerText.trim()) return el.innerText.trim();
-      }
+  // CCExtractor removed per user request to rely 100% on AI Audio capture
+  const CCExtractor = { detectCC: () => null }; 
 
-      // 2. Generic Video TextTracks
-      const video = document.querySelector('video');
-      if (video && video.textTracks) {
-        for (let i = 0; i < video.textTracks.length; i++) {
-          const track = video.textTracks[i];
-          if (track.mode === 'showing' && track.activeCues && track.activeCues.length > 0) {
-            return track.activeCues[0].text;
-          }
-        }
-      }
-      return null;
-    }
-  };
-
-  // Web Speech (Mic) removed as per user request for Internal Audio only
   function initWebSpeech() { return null; }
 
   function initOverlay() {
@@ -198,15 +173,7 @@
     }
     
     if (activeObserver) clearInterval(activeObserver);
-    let lastProcessedText = "";
-    // Polling for CC (Instant source if available)
-    activeObserver = setInterval(() => {
-      const text = CCExtractor.detectCC();
-      if (text && text !== lastProcessedText) {
-        lastProcessedText = text;
-        chrome.runtime.sendMessage({ action: "PROCESS_TEXT", text });
-      }
-    }, 800);
+    console.log("Jayden Translator: AI Audio Engine Started (CC Polling Disabled)");
   }
 
   function stopEngine() {

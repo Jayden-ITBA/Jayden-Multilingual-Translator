@@ -42,7 +42,7 @@ async function startRecording(streamId) {
       };
     }
   };
-  recorder.start(3000); // Record in 3-second chunks
+  recorder.start(2000); // 2-second chunks for purely AI-driven flow
 }
 
 function stopRecording() {

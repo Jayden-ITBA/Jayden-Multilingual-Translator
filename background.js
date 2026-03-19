@@ -186,17 +186,55 @@ async function startTabAudioCapture() {
 
 async function handleAudioBlob(dataUrl) {
   if (!isCapturing) return;
+  
   try {
-    const response = await fetch(dataUrl);
-    const audioBlob = await response.blob();
-    const transcription = await AITranslationService.transcribe(audioBlob);
-    if (transcription) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) handleTranslationFlow(transcription, tabs[0].id);
+    const base64Data = dataUrl.split(',')[1];
+    
+    if (AITranslationService.provider === 'gemini') {
+      const langMap = { 'vi': 'Vietnamese', 'en': 'English', 'ja': 'Japanese', 'ko': 'Korean', 'zh': 'Chinese', 'fr': 'French' };
+      const langName = langMap[targetLanguage] || 'Vietnamese';
+      
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AITranslationService.apiKey}`;
+      const prompt = `Listen to this audio and translate it to ${langName} as concise subtitles. Provide ONLY the translated text. If silent or music only, return '♪♪♪'.`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: "audio/webm", data: base64Data } }
+            ]
+          }]
+        })
       });
+      
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        const translation = data.candidates[0].content.parts[0].text.trim();
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { 
+            action: "UPDATE_SUBTITLES", 
+            original: "AI Audio Capture", 
+            translated: translation 
+          }).catch(() => {});
+        });
+      }
+    } else {
+      // OpenAI Whisper + Translation flow
+      const response = await fetch(dataUrl);
+      const audioBlob = await response.blob();
+      const transcription = await AITranslationService.transcribe(audioBlob);
+      if (transcription) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) handleTranslationFlow(transcription, tabs[0].id);
+        });
+      }
     }
   } catch (e) {
-    console.error("Transcription error:", e);
+    console.error("Audio processing error:", e);
   }
 }
 
