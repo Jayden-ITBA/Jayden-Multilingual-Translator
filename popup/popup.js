@@ -16,14 +16,26 @@ document.addEventListener('DOMContentLoaded', () => {
       langSelect.value = result.targetLanguage;
       updateLangText(result.targetLanguage);
     }
+    
     if (result.apiKey) apiKeyInput.value = result.apiKey;
-    if (result.provider) providerSelect.value = result.provider;
+    if (result.provider) {
+      providerSelect.value = result.provider;
+      updateKeyPlaceholder(result.provider);
+    }
     
     if (result.isCapturing) {
       updateUIActive(true);
       mainToggle.checked = true;
     }
   });
+
+  function updateKeyPlaceholder(provider) {
+    const names = {
+      'openai': 'OpenAI', 'gemini': 'Google Gemini',
+      'deepseek': 'DeepSeek', 'openrouter': 'OpenRouter'
+    };
+    apiKeyInput.placeholder = `Enter ${names[provider]} Key`;
+  }
 
   function updateUIActive(isActive) {
     if (isActive) {
@@ -70,12 +82,15 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.sendMessage({ action: "SET_LANGUAGE", language: langSelect.value });
   });
 
-  apiKeyInput.addEventListener('change', () => {
-    chrome.runtime.sendMessage({ action: "SET_API_KEY", apiKey: apiKeyInput.value.trim() });
+  apiKeyInput.addEventListener('input', () => {
+    const val = apiKeyInput.value.trim();
+    chrome.runtime.sendMessage({ action: "SET_API_KEY", apiKey: val });
   });
 
   providerSelect.addEventListener('change', () => {
-    chrome.runtime.sendMessage({ action: "SET_PROVIDER", provider: providerSelect.value });
+    const provider = providerSelect.value;
+    updateKeyPlaceholder(provider);
+    chrome.runtime.sendMessage({ action: "SET_PROVIDER", provider: provider });
   });
 
   gearLink.addEventListener('click', () => {

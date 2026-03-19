@@ -1,11 +1,12 @@
 // background.js - Version 1.0.8 (Finalized Platform Support)
 const AITranslationService = {
-  apiKey: null,
+  apiKey: '',
   provider: 'openai',
-  setApiKey: (key) => { AITranslationService.apiKey = key; },
-  setProvider: (prov) => { AITranslationService.provider = prov; },
   
-  // Whisper Transcription (OpenAI only for now)
+  setApiKey(key) { this.apiKey = key; },
+  setProvider(p) { this.provider = p; },
+
+  // Whisper API (Speech-to-Text)
   transcribe: async (audioBlob) => {
     if (!AITranslationService.apiKey || AITranslationService.provider !== 'openai') return null;
     const formData = new FormData();
@@ -46,7 +47,7 @@ const AITranslationService = {
         'vi': 'Vietnamese', 'en': 'English', 'ja': 'Japanese',
         'ko': 'Korean', 'zh': 'Chinese', 'fr': 'French'
       };
-      const langName = langMap[targetLanguage] || 'Vietnamese';
+      const langName = langMap[targetLang] || 'Vietnamese';
       url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AITranslationService.apiKey}`;
       const prompt = `Translate the lyrics/subtitles to ${langName}. If it's just symbols like ♪, return just those symbols. If it's text, translate it accurately. Output ONLY the translation. Text: ${text}`;
       
@@ -92,10 +93,10 @@ let audioRecorder = null;
 let streamInstance = null;
 
 chrome.storage.sync.get(['apiKey', 'targetLanguage', 'provider', 'isCapturing'], (result) => {
-  if (result.apiKey) AITranslationService.setApiKey(result.apiKey);
+  if (result.apiKey) AITranslationService.apiKey = result.apiKey;
   if (result.targetLanguage) targetLanguage = result.targetLanguage;
   if (result.provider) AITranslationService.setProvider(result.provider);
-  if (result.isCapturing !== undefined) isCapturing = result.isCapturing;
+  isCapturing = result.isCapturing || false;
   
   // If we were capturing before suspension, ensure offscreen is ready
   if (isCapturing) {
