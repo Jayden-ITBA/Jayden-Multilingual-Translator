@@ -98,12 +98,28 @@
   }
 
   function updateUI(original, translated) {
+    // Self-healing: Ensure overlay exists if a subtitle arrives
+    if (!document.getElementById('jayden-translator-overlay')) {
+      initOverlay();
+    }
+    
     const overlay = document.getElementById('jayden-translator-overlay');
     if (!overlay || !overlay.shadowRoot) return;
+    
     const origEl = overlay.shadowRoot.getElementById('jayden-original');
     const transEl = overlay.shadowRoot.getElementById('jayden-translated');
+    
     if (origEl) origEl.innerText = original;
-    if (transEl) transEl.innerText = translated;
+    if (transEl) {
+      // If original and translated are identical, it usually means translation failed
+      if (original.trim() === translated.trim()) {
+        transEl.innerText = "... (Đang dịch)";
+        transEl.style.opacity = "0.6";
+      } else {
+        transEl.innerText = translated;
+        transEl.style.opacity = "1";
+      }
+    }
   }
 
   function makeDraggable(el, handle) {
