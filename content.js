@@ -43,6 +43,13 @@
 
   function initOverlay() {
     if (document.getElementById('jayden-translator-overlay')) return;
+    
+    // Safety check for document body
+    if (!document.body) {
+      setTimeout(initOverlay, 500);
+      return;
+    }
+
     const container = document.createElement('div');
     container.id = 'jayden-translator-overlay';
     const shadow = container.attachShadow({ mode: 'open' });
@@ -51,35 +58,36 @@
     style.textContent = `
       #subtitle-box {
         position: fixed; bottom: 12%; left: 50%; transform: translateX(-50%);
-        background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(10px);
-        color: white; padding: 12px 24px; border-radius: 12px;
-        font-family: system-ui, -apple-system, sans-serif; text-align: center;
-        z-index: 10000; min-width: 400px; max-width: 90%;
-        border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-        user-select: none;
-        resize: both; overflow: hidden; /* Enable resizing */
+        background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(12px);
+        color: white; padding: 14px 28px; border-radius: 16px;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif; text-align: center;
+        z-index: 2147483647; min-width: 420px; max-width: 90%;
+        border: 1px solid rgba(255, 255, 255, 0.2); 
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
+        user-select: none; transition: opacity 0.3s ease;
+        resize: both; overflow: hidden;
       }
       #drag-handle {
-        width: 100%; height: 14px; cursor: move;
-        background: rgba(255,255,255,0.08); border-radius: 7px; margin-bottom: 10px;
+        width: 100%; height: 16px; cursor: move;
+        background: rgba(255,255,255,0.06); border-radius: 8px; margin-bottom: 12px;
         display: flex; justify-content: center; align-items: center;
       }
-      #drag-handle::after { content: "•••"; color: #777; font-size: 12px; letter-spacing: 3px; }
+      #drag-handle::after { content: "•••"; color: rgba(255,255,255,0.3); font-size: 14px; letter-spacing: 4px; }
       #resize-corner {
-        position: absolute; right: 0; bottom: 0; width: 15px; height: 15px;
-        cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%);
-        border-bottom-right-radius: 12px;
+        position: absolute; right: 0; bottom: 0; width: 18px; height: 18px;
+        cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.3) 50%);
+        border-bottom-right-radius: 16px;
       }
-      .original { font-size: 14px; color: #b0b0b0; margin-bottom: 6px; font-style: italic; opacity: 0.8; }
-      .translated { font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.4; }
+      .original { font-size: 15px; color: #b0b0b0; margin-bottom: 8px; font-style: italic; opacity: 0.9; line-height: 1.2; }
+      .translated { font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     `;
     
     const box = document.createElement('div');
     box.id = 'subtitle-box';
     box.innerHTML = `
       <div id="drag-handle"></div>
-      <div id="jayden-original" class="original">Detecting audio/CC...</div>
-      <div id="jayden-translated" class="translated">Đang nhận diện giọng nói...</div>
+      <div id="jayden-original" class="original">Đang chờ âm thanh...</div>
+      <div id="jayden-translated" class="translated">Jayden Translator Active</div>
       <div id="resize-corner"></div>
     `;
     

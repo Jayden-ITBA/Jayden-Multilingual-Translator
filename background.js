@@ -80,10 +80,17 @@ let targetLanguage = 'vi';
 let audioRecorder = null;
 let streamInstance = null;
 
-chrome.storage.sync.get(['apiKey', 'targetLanguage', 'provider'], (result) => {
+chrome.storage.sync.get(['apiKey', 'targetLanguage', 'provider', 'isCapturing'], (result) => {
   if (result.apiKey) AITranslationService.setApiKey(result.apiKey);
   if (result.targetLanguage) targetLanguage = result.targetLanguage;
   if (result.provider) AITranslationService.setProvider(result.provider);
+  if (result.isCapturing !== undefined) isCapturing = result.isCapturing;
+  
+  // If we were capturing before suspension, ensure offscreen is ready
+  if (isCapturing) {
+    setupOffscreenDocument('offscreen.html').catch(console.error);
+    broadcastToAllTabs("START_HYBRID_ENGINE");
+  }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -101,7 +108,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     targetLanguage = request.language;
     chrome.storage.sync.set({ targetLanguage: request.language });
   } else if (request.action === "PROCESS_TEXT") {
-    handleTranslationFlow(request.text, sender.tab?.id);
+    if (sender.tab && sender.tab.id) {
+      handleTranslationFlow(request.text, sender.tab.id);
+    } else {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) handleTranslationFlow(request.text, tabs[0].id);
+      });
+    }
   } else if (request.action === "PROCESS_AUDIO_BLOB") {
     handleAudioBlob(request.dataUrl);
   }
